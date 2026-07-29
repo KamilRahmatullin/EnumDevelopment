@@ -1,0 +1,32 @@
+name: EnumDevelopment
+version: 1.0.5
+main: com.enumdev.enumdevelopment.Main
+api-version: 1.16
+author: Jasper
+commands:
+  ed:
+    description: Developer utility command.
+    usage: /ed help
+    aliases: [enumdevelopment]
+permissions:
+  enumdevelopment.use:
+    description: Allows use of /ed.
+    default: op
+  enumdevelopment.find:
+    description: Allows file search.
+    default: op
+  enumdevelopment.replace:
+    description: Allows file replacement.
+    default: op
+  enumdevelopment.finditem:
+    description: Allows item search in files.
+    default: op
+  enumdevelopment.replaceitem:
+    description: Allows item replacement in files.
+    default: op
+  enumdevelopment.undo:
+    description: Allows undo of the latest replacement.
+    default: op
+  enumdevelopment.reload:
+    description: Allows plugin reload.
+    default: op

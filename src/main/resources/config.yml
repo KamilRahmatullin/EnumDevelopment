@@ -1,0 +1,90 @@
+settings:
+  item-search:
+    match-amount: false
+    scan-base64: true
+    preserve-amount-on-replace: true
+    base64-min-length: 48
+  undo:
+    enabled: true
+    directory: undo
+    max-sessions: 10
+  max-depth: 32
+  progress:
+    enabled: true
+    interval-files: 1000
+    interval-ms: 3000
+  ignored-directories:
+  - cache
+  - caches
+  - logs
+  - log
+  - backup
+  - backups
+  - libraries
+  - database
+  - databases
+  - storage
+  case-sensitive: true
+  max-chat-results: 15
+  max-stored-results: 100000
+  max-active-tasks: 16
+  max-file-size-kb: 8192
+  follow-symbolic-links: false
+  search-binary-files: false
+  allow-outside-server-directory: false
+  result-directory: results
+  charset: UTF-8
+  allowed-extensions:
+  - .yml
+  - .yaml
+flags:
+  save: -s
+  force: -f
+  name: -n
+  name-long: -name
+messages:
+  prefix: "&#44D7B6&lEnumDevelopment &8» "
+  no-permission: "&cУ вас нет прав для выполнения этой команды."
+  only-player: "&cЭта команда доступна только игроку."
+  unknown-command: "&cНеизвестная подкоманда. Используйте &f/ed help&c."
+  invalid-syntax: "&cНеверный синтаксис. Используйте: &f{usage}"
+  invalid-path: "&cПуть не найден или недоступен: &f{path}"
+  outside-server-root: "&cЭтот путь выходит за пределы папки сервера."
+  unclosed-quote: "&cВ команде не закрыта кавычка."
+  invalid-flag: "&cНеизвестный флаг: &f{flag}"
+  missing-flag-value: "&cДля флага &f{flag} &cнужно указать значение."
+  empty-main-hand: "&cВозьмите искомый предмет в основную руку."
+  empty-off-hand: "&cВозьмите предмет-замену во вторую руку."
+  task-limit: "&cСейчас выполняется слишком много задач. Попробуйте позже."
+  task-started-find: "&7Поиск &f{target} &7в &f{path} &7запущен асинхронно."
+  task-started-replace: "&7Замена &f{target} &7на &f{replacement} &7в &f{path} &7запущена асинхронно."
+  task-started-finditem: "&7Поиск предмета &f{target} &7в &f{path} &7запущен асинхронно."
+  task-started-replaceitem: "&7Замена предмета &f{target} &7на &f{replacement} &7в &f{path} &7запущена асинхронно."
+  task-started-undo: "&7Отмена последней замены запущена асинхронно."
+  task-progress: "&7Обработка: всего &f{total}&7, проверено &f{scanned}&7, пропущено &f{skipped}&7, совпадений &f{matches}&7, файл &f{file}&7."
+  task-failed: "&cЗадача завершилась с ошибкой: &f{error}"
+  task-cancelled: "&cЗадача была отменена."
+  search-finished: "&aПоиск завершён за &f{time}мс&a. Всего файлов: &f{total}&a, проверено: &f{files}&a, пропущено: &f{skipped}&a, совпадений: &f{matches}&a."
+  replace-finished: "&aЗамена завершена за &f{time}мс&a. Всего файлов: &f{total}&a, проверено: &f{files}&a, пропущено: &f{skipped}&a, замен: &f{replacements}&a."
+  no-results: "&eСовпадений не найдено."
+  result-line-find: "&8- &f{file}&7:&f{line} &8→ &7{content}"
+  result-line-replace: "&8- &f{file}&7:&f{line} &8→ &7{before} &8=> &a{after}"
+  results-truncated: "&eРезультаты в памяти ограничены: показано/сохранено &f{stored}&e из &f{total}&e. Увеличьте settings.max-stored-results при необходимости."
+  errors-detected: "&eНекоторые файлы не удалось обработать: &f{errors}&e. Подробности есть в сохранённом файле, если включён флаг сохранения."
+  file-exists: "&cФайл результатов уже существует: &f{file}&c. Добавьте &f-f&c для перезаписи."
+  results-saved: "&aРезультаты сохранены в файл: &f{file}"
+  undo-available: "&7Для отмены этой замены используйте &f/ed undo&7."
+  undo-none: "&eНет сохранённых изменений для отмены."
+  undo-finished: "&aОтмена завершена за &f{time}мс&a. Восстановлено файлов: &f{restored}&a/&f{total}&a."
+  undo-partial: "&eОтмена выполнена частично за &f{time}мс&e. Восстановлено файлов: &f{restored}&e/&f{total}&e, ошибок: &f{errors}&e."
+  reload-success: "&aКонфигурация EnumDevelopment перезагружена."
+  help:
+    - "&#44D7B6&lEnumDevelopment &8— &7помощь"
+    - "&f/ed find \"строка\" /plugins &8или &f/ed find 'JSON/строка' /plugins &8[-s] [-n имя] [-f]"
+    - "&f/ed replace \"старое\" \"новое\" /plugins &8или &f/ed replace 'старое JSON' 'новое JSON' /plugins &8[-s] [-n имя] [-f]"
+    - "&f/ed finditem /plugins &8[-s] [-n имя] [-f] &8— &7найти предмет из основной руки"
+    - "&f/ed replaceitem /plugins &8[-s] [-n имя] [-f] &8— &7заменить предмет из основной руки на предмет из второй руки"
+    - "&f/ed undo &8— &7отменить последнюю замену"
+    - "&f/ed reload"
+    - "&7Строки можно оборачивать в &f\"двойные\" &7или &f'одинарные' &7кавычки."
+    - "&7Флаги: &f-s &7сохранить, &f-n/-name &7имя файла, &f-f &7перезаписать."
