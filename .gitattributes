@@ -1,0 +1,14 @@
+* text=auto eol=lf
+
+*.bat  text eol=crlf
+*.ps1  text eol=crlf
+
+*.java   text diff=java
+*.xml    text
+*.yml    text
+*.yaml   text
+*.md     text
+
+*.jar    binary
+*.png    binary
+*.jpg    binary
