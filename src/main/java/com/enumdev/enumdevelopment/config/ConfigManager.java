@@ -101,6 +101,10 @@ public final class ConfigManager {
         config.addDefault("flags.force", "-f");
         config.addDefault("flags.name", "-n");
         config.addDefault("flags.name-long", "-name");
+        config.addDefault("flags.ignore-case", "-i");
+        config.addDefault("flags.case-sensitive", "-cs");
+        config.addDefault("flags.colors", "-g");
+        config.addDefault("flags.strip-colors", "-gs");
         config.addDefault("messages.prefix", "&#44D7B6&lEnumDevelopment &8» ");
         config.addDefault("messages.no-permission", "&cУ вас нет прав для выполнения этой команды.");
         config.addDefault("messages.only-player", "&cЭта команда доступна только игроку.");
@@ -138,14 +142,17 @@ public final class ConfigManager {
         config.addDefault("messages.reload-success", "&aКонфигурация EnumDevelopment перезагружена.");
         List<String> help = new ArrayList<String>();
         help.add("&#44D7B6&lEnumDevelopment &8— &7помощь");
-        help.add("&f/ed find \"строка\" /plugins &8или &f/ed find 'JSON/строка' /plugins &8[-s] [-n имя] [-f]");
-        help.add("&f/ed replace \"старое\" \"новое\" /plugins &8или &f/ed replace 'старое JSON' 'новое JSON' /plugins &8[-s] [-n имя] [-f]");
+        help.add("&f/ed find \"строка\" /plugins &8или &f/ed find 'JSON/строка' /plugins &8[-s] [-n имя] [-f] [-i] [-g]");
+        help.add("&f/ed replace \"старое\" \"новое\" /plugins &8или &f/ed replace 'старое JSON' 'новое JSON' /plugins &8[-s] [-n имя] [-f] [-i] [-g]");
         help.add("&f/ed finditem /plugins &8[-s] [-n имя] [-f] &8— &7найти предмет из основной руки");
         help.add("&f/ed replaceitem /plugins &8[-s] [-n имя] [-f] &8— &7заменить предмет из основной руки на предмет из второй руки");
         help.add("&f/ed undo &8— &7отменить последнюю замену");
         help.add("&f/ed reload");
         help.add("&7Строки можно оборачивать в &f\"двойные\" &7или &f'одинарные' &7кавычки.");
         help.add("&7Флаги: &f-s &7сохранить, &f-n/-name &7имя файла, &f-f &7перезаписать.");
+        help.add("&7Флаги поиска: &f-i &7игнорировать регистр, &f-cs &7учитывать регистр.");
+        help.add("&7&f-g &7— игнорировать цвета и градиенты любого формата; при замене градиент сохраняется.");
+        help.add("&7&f-gs &7— то же, но новый текст вставляется без цветов.");
         config.addDefault("messages.help", help);
     }
 

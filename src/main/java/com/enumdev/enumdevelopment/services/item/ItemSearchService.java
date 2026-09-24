@@ -33,6 +33,8 @@ public final class ItemSearchService {
 
     private final ConfigManager configManager;
     private final Base64ItemCodec base64ItemCodec = new Base64ItemCodec();
+    private final HeadTextureUtil headTextureUtil = new HeadTextureUtil();
+    private final FlexibleItemStringCodec flexibleItemStringCodec = new FlexibleItemStringCodec(headTextureUtil);
 
     public ItemSearchService(ConfigManager configManager) {
         this.configManager = configManager;
@@ -44,6 +46,11 @@ public final class ItemSearchService {
                 processYamlFile(path, options, report, undoSession, undoManager);
                 return;
             } catch (InvalidConfigurationException ignored) {
+                processRawFile(path, options, report, undoSession, undoManager);
+                return;
+            } catch (IllegalArgumentException ignored) {
+                // Unknown/custom ConfigurationSerializable aliases must not make
+                // the whole file invisible; raw encodings are still searchable.
                 processRawFile(path, options, report, undoSession, undoManager);
                 return;
             }
@@ -98,6 +105,10 @@ public final class ItemSearchService {
 
         if (value instanceof ConfigurationSection) {
             ConfigurationSection child = (ConfigurationSection) value;
+            Map<String, Object> plain = toPlainMap(child);
+            if (looksLikeCustomHeadWrapper(plain)) {
+                return processCustomHeadMap("yaml-custom-head:" + path, path, plain, context);
+            }
             ItemStack item = tryReadItemStack(root, path, child);
             if (item != null) {
                 return processYamlItem("yaml:" + path, path, item, context);
@@ -115,13 +126,33 @@ public final class ItemSearchService {
         }
 
         if (value instanceof Map<?, ?>) {
-            return processYamlMap(root, path, (Map<?, ?>) value, context);
+            Map<?, ?> map = (Map<?, ?>) value;
+            if (looksLikeCustomHeadWrapper(map)) {
+                return processCustomHeadMap("yaml-custom-head:" + path, path, map, context);
+            }
+            return processYamlMap(root, path, map, context);
         }
 
-        if (value instanceof String && configManager.isItemSearchScanBase64()) {
-            String replaced = processBase64Value((String) value, context, "yaml-base64:" + path, context.findLine(path));
-            if (replaced != null) {
-                return YamlValueResult.changed(replaced);
+        if (value instanceof String) {
+            String text = (String) value;
+            FlexibleItemStringCodec.ProcessResult flexible = flexibleItemStringCodec.process(
+                    text,
+                    context.getTargetItem(),
+                    context.getReplacementItemRaw(),
+                    context.isReplaceMode()
+            );
+            if (flexible.getMatches() > 0) {
+                context.addStructuredTextMatch("yaml-text-item:" + path, context.findLine(path), context.getTargetItem(), flexible.getMatches(), flexible.isChanged());
+                if (flexible.isChanged()) {
+                    return YamlValueResult.changed(flexible.getValue());
+                }
+            }
+
+            if (configManager.isItemSearchScanBase64()) {
+                String replaced = processBase64Value(text, context, "yaml-base64:" + path, context.findLine(path));
+                if (replaced != null) {
+                    return YamlValueResult.changed(replaced);
+                }
             }
         }
 
@@ -169,6 +200,128 @@ public final class ItemSearchService {
             return YamlValueResult.unchanged();
         }
         return YamlValueResult.changed(copy);
+    }
+
+    private boolean looksLikeCustomHeadWrapper(Map<?, ?> map) {
+        if (map == null || !map.containsKey("item")) {
+            return false;
+        }
+        Object marker = map.get("enum-item");
+        if (marker != null && String.valueOf(marker).toLowerCase(Locale.ROOT).contains("head")) {
+            return true;
+        }
+        return map.containsKey("texture") || map.containsKey("profile-textures") || map.containsKey("profile-id");
+    }
+
+    private YamlValueResult processCustomHeadMap(String location, String linePath, Map<?, ?> source, YamlScanContext context) throws IOException {
+        Object nested = source.get("item");
+        ItemStack item = readNestedItem(nested);
+        if (item == null || !headTextureUtil.isPlayerHead(item)) {
+            return processYamlMap(null, linePath, source, context);
+        }
+
+        HeadTextureUtil.TextureData externalTexture = headTextureUtil.extractFromObject(source, "custom-head");
+        String texture = externalTexture.hasTexture() ? externalTexture.getValue() : null;
+        if (!context.matches(item, texture)) {
+            return YamlValueResult.unchanged();
+        }
+
+        if (!context.isReplaceMode()) {
+            context.addMatch(location, linePath, item);
+            return YamlValueResult.unchanged();
+        }
+
+        ItemStack replacement = context.getReplacementItem(item);
+        if (replacement == null) {
+            return YamlValueResult.unchanged();
+        }
+        context.addReplacement(location, linePath, item, replacement);
+
+        if (!headTextureUtil.isPlayerHead(replacement)) {
+            return YamlValueResult.changed(replacement);
+        }
+
+        HeadTextureUtil.TextureData replacementTexture = headTextureUtil.extract(replacement);
+        if (!replacementTexture.hasTexture() || replacementTexture.getValue() == null) {
+            // A custom-head wrapper without a texture would recreate a skinless head.
+            // Store the complete Bukkit item instead, which is the safest lossless form.
+            return YamlValueResult.changed(replacement);
+        }
+
+        Map<Object, Object> copy = copyMap(source);
+        copy.put("item", replacement);
+        if (copy.containsKey("texture") || source.containsKey("texture")) {
+            copy.put("texture", replacementTexture.getValue());
+        }
+
+        if (copy.containsKey("profile-id")) {
+            copy.put("profile-id", replacementTexture.getProfileId() == null
+                    ? headTextureUtil.deterministicProfileId(replacementTexture.getValue()).toString()
+                    : replacementTexture.getProfileId().toString());
+        }
+        if (copy.containsKey("profile-name")) {
+            String current = source.get("profile-name") == null ? null : String.valueOf(source.get("profile-name"));
+            String replacementName = replacementTexture.getProfileName();
+            copy.put("profile-name", replacementName == null || replacementName.isEmpty()
+                    ? (current == null || current.isEmpty() ? "EnumDevelopment" : current)
+                    : replacementName);
+        }
+        if (copy.containsKey("profile-textures")) {
+            copy.put("profile-textures", replaceProfileTextures(copy.get("profile-textures"), replacementTexture));
+        }
+        return YamlValueResult.changed(copy);
+    }
+
+    private ItemStack readNestedItem(Object value) {
+        if (value instanceof ItemStack) {
+            return ((ItemStack) value).clone();
+        }
+        if (value instanceof ConfigurationSection) {
+            try {
+                return ItemStack.deserialize(toPlainMap((ConfigurationSection) value));
+            } catch (Exception ignored) {
+                return null;
+            }
+        }
+        if (value instanceof Map<?, ?>) {
+            return tryReadItemStack((Map<?, ?>) value);
+        }
+        return null;
+    }
+
+    private Map<Object, Object> copyMap(Map<?, ?> source) {
+        Map<Object, Object> copy = new LinkedHashMap<Object, Object>();
+        for (Map.Entry<?, ?> entry : source.entrySet()) {
+            copy.put(entry.getKey(), entry.getValue());
+        }
+        return copy;
+    }
+
+    private Object replaceProfileTextures(Object original, HeadTextureUtil.TextureData texture) {
+        List<Object> result = new ArrayList<Object>();
+        if (original instanceof List<?>) {
+            for (Object entry : (List<?>) original) {
+                if (entry instanceof Map<?, ?>) {
+                    Map<Object, Object> property = copyMap((Map<?, ?>) entry);
+                    property.put("value", texture.getValue());
+                    if (texture.getSignature() != null && !texture.getSignature().isEmpty()) {
+                        property.put("signature", texture.getSignature());
+                    } else {
+                        property.remove("signature");
+                    }
+                    result.add(property);
+                }
+            }
+        }
+        if (result.isEmpty()) {
+            Map<Object, Object> property = new LinkedHashMap<Object, Object>();
+            property.put("value", texture.getValue());
+            if (texture.getSignature() != null && !texture.getSignature().isEmpty()) {
+                property.put("signature", texture.getSignature());
+            }
+            result.add(property);
+        }
+        return result;
     }
 
     private YamlValueResult processYamlItem(String location, String linePath, ItemStack item, YamlScanContext context) {
@@ -298,9 +451,9 @@ public final class ItemSearchService {
         ItemMatcher itemMatcher = new ItemMatcher(configManager.isItemSearchMatchAmount());
         RawScanContext context = new RawScanContext(path, options, report, itemMatcher, content);
 
-        String updated = content;
+        String updated = replaceFlexibleItemTokens(content, context);
         if (configManager.isItemSearchScanBase64()) {
-            updated = replaceBase64Tokens(content, context);
+            updated = replaceBase64Tokens(updated, context);
         }
 
         if (context.hasChanges()) {
@@ -321,6 +474,28 @@ public final class ItemSearchService {
         if (context.hasMatches()) {
             report.addMatchedFile();
         }
+    }
+
+    private String replaceFlexibleItemTokens(String content, RawScanContext context) {
+        FlexibleItemStringCodec.ProcessResult result = flexibleItemStringCodec.process(
+                content,
+                context.getTargetItem(),
+                context.getReplacementItemRaw(),
+                context.isReplaceMode()
+        );
+        if (result.getMatches() <= 0) {
+            return content;
+        }
+        int first = content.toLowerCase(Locale.ROOT).indexOf("basehead");
+        if (first < 0) {
+            first = content.toLowerCase(Locale.ROOT).indexOf("custom-head");
+        }
+        context.addStructuredTextMatch("text-item", context.findLine(Math.max(0, first)), context.getTargetItem(), result.getMatches(), result.isChanged());
+        if (result.isChanged()) {
+            context.markChanged();
+            return result.getValue();
+        }
+        return content;
     }
 
     private String replaceBase64Tokens(String content, RawScanContext context) throws IOException {
@@ -458,6 +633,34 @@ public final class ItemSearchService {
 
         protected boolean matches(ItemStack item) {
             return itemMatcher.matches(options.getTargetItem(), item);
+        }
+
+        protected boolean matches(ItemStack item, String externalHeadTexture) {
+            return itemMatcher.matches(options.getTargetItem(), item, externalHeadTexture);
+        }
+
+        protected ItemStack getTargetItem() {
+            return options.getTargetItem();
+        }
+
+        protected ItemStack getReplacementItemRaw() {
+            return options.getReplacementItem();
+        }
+
+        protected void addStructuredTextMatch(String location, int line, ItemStack item, int amount, boolean replaced) {
+            addMatches(amount);
+            if (replaced) {
+                addReplacements(amount);
+                report.addResult(SearchResult.replaced(
+                        file(),
+                        line,
+                        amount,
+                        location + " -> " + ItemDescriptionUtil.describe(item),
+                        location + " -> " + ItemDescriptionUtil.describe(options.getReplacementItem())
+                ));
+            } else {
+                report.addResult(SearchResult.found(file(), line, amount, location + " -> " + ItemDescriptionUtil.describe(item)));
+            }
         }
 
         protected boolean isReplaceMode() {

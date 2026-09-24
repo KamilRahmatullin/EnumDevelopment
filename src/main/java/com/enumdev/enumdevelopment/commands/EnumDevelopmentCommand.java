@@ -125,7 +125,7 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
 
         List<String> tokens = parsed.getTokens();
         if (tokens.size() < 2) {
-            messageUtil.send(sender, "invalid-syntax", "usage", "/ed find \"слово или строка\" /plugins [-s] [-n имя] [-f]");
+            messageUtil.send(sender, "invalid-syntax", "usage", "/ed find \"слово или строка\" /plugins [-s] [-n имя] [-f] [-i] [-g]");
             return;
         }
 
@@ -147,6 +147,9 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
                 .save(flags.save)
                 .force(flags.force)
                 .fileName(flags.fileName)
+                .caseSensitive(flags.caseSensitive)
+                .ignoreColors(flags.ignoreColors)
+                .keepColors(flags.keepColors)
                 .build();
 
         taskManager.startTask(sender, options);
@@ -166,7 +169,7 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
 
         List<String> tokens = parsed.getTokens();
         if (tokens.size() < 3) {
-            messageUtil.send(sender, "invalid-syntax", "usage", "/ed replace \"старое\" \"новое\" /plugins [-s] [-n имя] [-f]");
+            messageUtil.send(sender, "invalid-syntax", "usage", "/ed replace \"старое\" \"новое\" /plugins [-s] [-n имя] [-f] [-i] [-g]");
             return;
         }
 
@@ -189,6 +192,9 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
                 .save(flags.save)
                 .force(flags.force)
                 .fileName(flags.fileName)
+                .caseSensitive(flags.caseSensitive)
+                .ignoreColors(flags.ignoreColors)
+                .keepColors(flags.keepColors)
                 .build();
 
         taskManager.startTask(sender, options);
@@ -241,6 +247,9 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
                 .save(flags.save)
                 .force(flags.force)
                 .fileName(flags.fileName)
+                .caseSensitive(flags.caseSensitive)
+                .ignoreColors(flags.ignoreColors)
+                .keepColors(flags.keepColors)
                 .build();
 
         taskManager.startTask(sender, options);
@@ -301,6 +310,9 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
                 .save(flags.save)
                 .force(flags.force)
                 .fileName(flags.fileName)
+                .caseSensitive(flags.caseSensitive)
+                .ignoreColors(flags.ignoreColors)
+                .keepColors(flags.keepColors)
                 .build();
 
         taskManager.startTask(sender, options);
@@ -316,6 +328,10 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
         String forceFlag = configManager.getFlag("force");
         String nameFlag = configManager.getFlag("name");
         String longNameFlag = configManager.getFlag("name-long");
+        String ignoreCaseFlag = configManager.getFlag("ignore-case");
+        String caseSensitiveFlag = configManager.getFlag("case-sensitive");
+        String colorsFlag = configManager.getFlag("colors");
+        String stripColorsFlag = configManager.getFlag("strip-colors");
 
         for (int index = startIndex; index < tokens.size(); index++) {
             String token = tokens.get(index);
@@ -325,6 +341,23 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
             }
             if (token.equalsIgnoreCase(forceFlag) || token.equalsIgnoreCase("--force")) {
                 flags.force = true;
+                continue;
+            }
+            if (matches(token, ignoreCaseFlag, "-i", "--ignore-case")) {
+                flags.caseSensitive = Boolean.FALSE;
+                continue;
+            }
+            if (matches(token, caseSensitiveFlag, "-cs", "--case-sensitive")) {
+                flags.caseSensitive = Boolean.TRUE;
+                continue;
+            }
+            if (matches(token, colorsFlag, "-g", "--gradient", "--colors")) {
+                flags.ignoreColors = true;
+                continue;
+            }
+            if (matches(token, stripColorsFlag, "-gs", "--strip-colors")) {
+                flags.ignoreColors = true;
+                flags.keepColors = false;
                 continue;
             }
             if (token.equalsIgnoreCase(nameFlag) || token.equalsIgnoreCase(longNameFlag) || token.equalsIgnoreCase("--name")) {
@@ -386,7 +419,7 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
         if (args.length == 3) {
             return pathUtil.complete(args[2]);
         }
-        return completeFlags(args);
+        return completeFlags(args, true);
     }
 
     private List<String> completeReplace(String[] args) {
@@ -396,17 +429,17 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
         if (args.length == 4) {
             return pathUtil.complete(args[3]);
         }
-        return completeFlags(args);
+        return completeFlags(args, true);
     }
 
     private List<String> completeItem(String[] args) {
         if (args.length == 2) {
             return pathUtil.complete(args[1]);
         }
-        return completeFlags(args);
+        return completeFlags(args, false);
     }
 
-    private List<String> completeFlags(String[] args) {
+    private List<String> completeFlags(String[] args, boolean textMode) {
         String current = args[args.length - 1];
         String previous = args.length >= 2 ? args[args.length - 2] : "";
         if (previous.equalsIgnoreCase(configManager.getFlag("name"))
@@ -420,7 +453,17 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
         addFlagIfAbsent(args, suggestions, configManager.getFlag("name"));
         addFlagIfAbsent(args, suggestions, configManager.getFlag("name-long"));
         addFlagIfAbsent(args, suggestions, configManager.getFlag("force"));
+        if (textMode) {
+            addFlagIfAbsent(args, suggestions, defaultFlag(configManager.getFlag("ignore-case"), "-i"));
+            addFlagIfAbsent(args, suggestions, defaultFlag(configManager.getFlag("case-sensitive"), "-cs"));
+            addFlagIfAbsent(args, suggestions, defaultFlag(configManager.getFlag("colors"), "-g"));
+            addFlagIfAbsent(args, suggestions, defaultFlag(configManager.getFlag("strip-colors"), "-gs"));
+        }
         return TabCompleteUtil.filter(suggestions, current);
+    }
+
+    private String defaultFlag(String configured, String fallback) {
+        return configured == null || configured.isEmpty() ? fallback : configured;
     }
 
     private void addFlagIfAbsent(String[] args, List<String> suggestions, String flag) {
@@ -435,10 +478,25 @@ public final class EnumDevelopmentCommand implements CommandExecutor, TabComplet
         suggestions.add(flag);
     }
 
+    private boolean matches(String token, String configuredFlag, String... aliases) {
+        if (configuredFlag != null && !configuredFlag.isEmpty() && token.equalsIgnoreCase(configuredFlag)) {
+            return true;
+        }
+        for (String alias : aliases) {
+            if (token.equalsIgnoreCase(alias)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static final class ParsedFlags {
         private boolean valid = true;
         private boolean save;
         private boolean force;
         private String fileName;
+        private Boolean caseSensitive;
+        private boolean ignoreColors;
+        private boolean keepColors = true;
     }
 }

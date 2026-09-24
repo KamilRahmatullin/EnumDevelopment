@@ -16,6 +16,9 @@ public final class SearchOptions {
     private final boolean save;
     private final boolean force;
     private final String fileName;
+    private final Boolean caseSensitive;
+    private final boolean ignoreColors;
+    private final boolean keepColors;
 
     private SearchOptions(Builder builder) {
         this.mode = builder.mode;
@@ -28,6 +31,9 @@ public final class SearchOptions {
         this.save = builder.save;
         this.force = builder.force;
         this.fileName = builder.fileName;
+        this.caseSensitive = builder.caseSensitive;
+        this.ignoreColors = builder.ignoreColors;
+        this.keepColors = builder.keepColors;
     }
 
     public static Builder builder(SearchMode mode) {
@@ -74,6 +80,26 @@ public final class SearchOptions {
         return fileName;
     }
 
+    /**
+     * Регистрозависимость, заданная флагом команды.
+     * {@code null} — использовать значение из конфигурации.
+     */
+    public Boolean getCaseSensitive() {
+        return caseSensitive;
+    }
+
+    public boolean isCaseSensitive(boolean fallback) {
+        return caseSensitive == null ? fallback : caseSensitive.booleanValue();
+    }
+
+    public boolean isIgnoreColors() {
+        return ignoreColors;
+    }
+
+    public boolean isKeepColors() {
+        return keepColors;
+    }
+
     public static final class Builder {
         private final SearchMode mode;
         private String target;
@@ -85,6 +111,9 @@ public final class SearchOptions {
         private boolean save;
         private boolean force;
         private String fileName;
+        private Boolean caseSensitive;
+        private boolean ignoreColors;
+        private boolean keepColors = true;
 
         private Builder(SearchMode mode) {
             this.mode = mode;
@@ -132,6 +161,21 @@ public final class SearchOptions {
 
         public Builder fileName(String fileName) {
             this.fileName = fileName;
+            return this;
+        }
+
+        public Builder caseSensitive(Boolean caseSensitive) {
+            this.caseSensitive = caseSensitive;
+            return this;
+        }
+
+        public Builder ignoreColors(boolean ignoreColors) {
+            this.ignoreColors = ignoreColors;
+            return this;
+        }
+
+        public Builder keepColors(boolean keepColors) {
+            this.keepColors = keepColors;
             return this;
         }
 

@@ -25,12 +25,12 @@ import java.util.zip.ZipInputStream;
 public final class Main extends JavaPlugin {
     private static final String PAYLOAD = "META-INF/enum.payload";
     private static final String ENTRYPOINT = "com.enumdev.enumdevelopment.internal.RuntimeEntrypoint";
-    private static final byte[] MAGIC = new byte[]{69, 68, 86, 80, 49, 48, 53, 33};
+    private static final byte[] MAGIC = new byte[]{69, 68, 86, 80, 49, 48, 54, 33};
     private static final byte[] KEY_PART_A = new byte[]{-126, -83, -62, 89, -117, 32, 35, 20, -52, -13, -77, -101, -70, -51, -62, 67};
     private static final byte[] KEY_PART_B = new byte[]{60, -23, -49, 59, -44, -72, 60, 4, 68, 5, 12, 99, 9, -15, 17, -118};
     private static final byte[] KEY_PART_C = new byte[]{64, 40, 38, -91, 78, 22, 81, -80, -43, 49, 54, -109, 87, 87, 55, -11};
     private static final byte[] KEY_PART_D = new byte[]{119, -96, -75, -29, -64, 113, 47, -68, 43, 37, 108, -125, -128, -33, -72, 5};
-    private static final byte[] AAD = "EnumDevelopment|1.0.5|payload".getBytes(StandardCharsets.UTF_8);
+    private static final byte[] AAD = "EnumDevelopment|1.0.6|payload".getBytes(StandardCharsets.UTF_8);
 
     private Object runtime;
     private Method disableMethod;

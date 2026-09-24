@@ -42,6 +42,10 @@ flags:
   force: -f
   name: -n
   name-long: -name
+  ignore-case: -i
+  case-sensitive: -cs
+  colors: -g
+  strip-colors: -gs
 messages:
   prefix: "&#44D7B6&lEnumDevelopment &8» "
   no-permission: "&cУ вас нет прав для выполнения этой команды."
@@ -80,11 +84,14 @@ messages:
   reload-success: "&aКонфигурация EnumDevelopment перезагружена."
   help:
     - "&#44D7B6&lEnumDevelopment &8— &7помощь"
-    - "&f/ed find \"строка\" /plugins &8или &f/ed find 'JSON/строка' /plugins &8[-s] [-n имя] [-f]"
-    - "&f/ed replace \"старое\" \"новое\" /plugins &8или &f/ed replace 'старое JSON' 'новое JSON' /plugins &8[-s] [-n имя] [-f]"
+    - "&f/ed find \"строка\" /plugins &8или &f/ed find 'JSON/строка' /plugins &8[-s] [-n имя] [-f] [-i] [-g]"
+    - "&f/ed replace \"старое\" \"новое\" /plugins &8или &f/ed replace 'старое JSON' 'новое JSON' /plugins &8[-s] [-n имя] [-f] [-i] [-g]"
     - "&f/ed finditem /plugins &8[-s] [-n имя] [-f] &8— &7найти предмет из основной руки"
     - "&f/ed replaceitem /plugins &8[-s] [-n имя] [-f] &8— &7заменить предмет из основной руки на предмет из второй руки"
     - "&f/ed undo &8— &7отменить последнюю замену"
     - "&f/ed reload"
     - "&7Строки можно оборачивать в &f\"двойные\" &7или &f'одинарные' &7кавычки."
     - "&7Флаги: &f-s &7сохранить, &f-n/-name &7имя файла, &f-f &7перезаписать."
+    - "&7Флаги поиска: &f-i &7игнорировать регистр, &f-cs &7учитывать регистр."
+    - "&7&f-g &7— игнорировать цвета и градиенты любого формата; при замене градиент сохраняется."
+    - "&7&f-gs &7— то же, но новый текст вставляется без цветов."

@@ -1,6 +1,17 @@
-﻿$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
-Set-Location $PSScriptRoot
+Set-Location -LiteralPath $PSScriptRoot
+
+function Assert-CommandExists {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+        throw "Required command was not found in PATH: $Name"
+    }
+}
 
 function Invoke-Checked {
     param(
@@ -11,14 +22,20 @@ function Invoke-Checked {
         [string[]]$Arguments = @()
     )
 
+    Write-Host ("> {0} {1}" -f $Command, ($Arguments -join " ")) -ForegroundColor DarkGray
     & $Command @Arguments
-    if ($LASTEXITCODE -ne 0) {
-        throw ("Команда завершилась с кодом {0}: {1} {2}" -f $LASTEXITCODE, $Command, ($Arguments -join ' '))
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -ne 0) {
+        throw ("Command failed with exit code {0}: {1} {2}" -f $exitCode, $Command, ($Arguments -join " "))
     }
 }
 
+Assert-CommandExists -Name "mvn"
+Assert-CommandExists -Name "javac"
+Assert-CommandExists -Name "java"
+
 $artifact = "EnumDevelopment"
-$version = "1.0.5"
+$version = "1.0.6"
 $asmVersion = "9.7.1"
 $dependencyPluginVersion = "3.6.1"
 
@@ -39,9 +56,9 @@ foreach ($asmArtifact in @("asm", "asm-commons", "asm-tree")) {
     )
 }
 
-$asmJars = @(Get-ChildItem -Path $libs -Filter "*.jar" | Sort-Object Name | ForEach-Object { $_.FullName })
+$asmJars = @(Get-ChildItem -LiteralPath $libs -Filter "*.jar" | Sort-Object Name | ForEach-Object { $_.FullName })
 if ($asmJars.Count -lt 3) {
-    throw "Не удалось загрузить библиотеки ASM в $libs"
+    throw "ASM libraries were not downloaded to: $libs"
 }
 
 $asmClasspath = [string]::Join([IO.Path]::PathSeparator, [string[]]$asmJars)
@@ -63,7 +80,7 @@ $mapping = Join-Path $target "$artifact-$version-mapping.txt"
 $protected = Join-Path $target "$artifact-$version-protected.jar"
 
 if (-not (Test-Path -LiteralPath $clean)) {
-    throw "Maven не создал исходный JAR: $clean"
+    throw "Maven did not create the source JAR: $clean"
 }
 
 Invoke-Checked -Command "java" -Arguments @(
@@ -87,8 +104,8 @@ Invoke-Checked -Command "java" -Arguments @(
     "com/enumdev/enumdevelopment/Main",
     "com/enumdev/enumdevelopment/internal/RuntimeEntrypoint",
     "META-INF/enum.payload",
-    "4544565031303521",
-    "EnumDevelopment|1.0.5|payload",
+    "4544565031303621",
+    "EnumDevelopment|1.0.6|payload",
     "82adc2598b202314ccf3b39bbacdc243",
     "3ce9cf3bd4b83c0444050c6309f1118a",
     "402826a54e1651b0d5313693575737f5",
@@ -97,12 +114,12 @@ Invoke-Checked -Command "java" -Arguments @(
 )
 
 if (-not (Test-Path -LiteralPath $protected)) {
-    throw "Защищённый JAR не был создан: $protected"
+    throw "Protected JAR was not created: $protected"
 }
 if (-not (Test-Path -LiteralPath $mapping)) {
-    throw "Mapping-файл не был создан: $mapping"
+    throw "Mapping file was not created: $mapping"
 }
 
 Write-Host ""
-Write-Host "Готовый защищённый JAR: $protected" -ForegroundColor Green
-Write-Host "Mapping: $mapping" -ForegroundColor Yellow
+Write-Host "Protected JAR: $protected" -ForegroundColor Green
+Write-Host "Mapping:       $mapping" -ForegroundColor Yellow

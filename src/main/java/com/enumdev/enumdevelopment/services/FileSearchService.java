@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public final class FileSearchService {
 
@@ -37,6 +35,14 @@ public final class FileSearchService {
     public FileSearchService(ConfigManager configManager) {
         this.configManager = configManager;
         this.itemSearchService = new ItemSearchService(configManager);
+    }
+
+    private TextSearchEngine.MatchSettings matchSettings(SearchOptions options) {
+        return new TextSearchEngine.MatchSettings(
+                options.isCaseSensitive(configManager.isCaseSensitive()),
+                options.isIgnoreColors(),
+                options.isKeepColors()
+        );
     }
 
     public SearchReport execute(SearchOptions options, SearchProgressListener progressListener, UndoSession undoSession, UndoManager undoManager) {
@@ -180,6 +186,7 @@ public final class FileSearchService {
 
     private void findInFile(Path path, SearchOptions options, SearchReport report) throws IOException {
         Charset charset = configManager.getCharset();
+        TextSearchEngine.MatchSettings settings = matchSettings(options);
         boolean matchedFile = false;
         int lineNumber = 0;
 
@@ -187,7 +194,7 @@ public final class FileSearchService {
             String line;
             while ((line = reader.readLine()) != null) {
                 lineNumber++;
-                int occurrences = countOccurrences(line, options.getTarget(), configManager.isCaseSensitive());
+                int occurrences = TextSearchEngine.count(line, options.getTarget(), settings);
                 if (occurrences <= 0) {
                     continue;
                 }
@@ -205,6 +212,7 @@ public final class FileSearchService {
 
     private void replaceInFile(Path path, SearchOptions options, SearchReport report, UndoSession undoSession, UndoManager undoManager) throws IOException {
         Charset charset = configManager.getCharset();
+        TextSearchEngine.MatchSettings settings = matchSettings(options);
         Path temp = path.resolveSibling(path.getFileName().toString() + ".enumdev-" + UUID.randomUUID() + ".tmp");
         boolean matchedFile = false;
         int lineNumber = 0;
@@ -215,7 +223,7 @@ public final class FileSearchService {
             String line;
             while ((line = reader.readLine()) != null) {
                 lineNumber++;
-                ReplaceLineResult replaced = replaceLine(line, options.getTarget(), options.getReplacement(), configManager.isCaseSensitive());
+                TextSearchEngine.ReplaceResult replaced = TextSearchEngine.replace(line, options.getTarget(), options.getReplacement(), settings);
                 if (replaced.getOccurrences() > 0) {
                     matchedFile = true;
                     replacementsInFile += replaced.getOccurrences();
@@ -259,71 +267,11 @@ public final class FileSearchService {
         }
     }
 
-    private int countOccurrences(String line, String target, boolean caseSensitive) {
-        if (target == null || target.isEmpty() || line.isEmpty()) {
-            return 0;
-        }
-
-        String haystack = caseSensitive ? line : line.toLowerCase(Locale.ROOT);
-        String needle = caseSensitive ? target : target.toLowerCase(Locale.ROOT);
-        int count = 0;
-        int index = 0;
-
-        while ((index = haystack.indexOf(needle, index)) >= 0) {
-            count++;
-            index += needle.length();
-        }
-        return count;
-    }
-
-    private ReplaceLineResult replaceLine(String line, String target, String replacement, boolean caseSensitive) {
-        if (target == null || target.isEmpty()) {
-            return new ReplaceLineResult(line, 0);
-        }
-
-        if (caseSensitive) {
-            int occurrences = countOccurrences(line, target, true);
-            if (occurrences == 0) {
-                return new ReplaceLineResult(line, 0);
-            }
-            return new ReplaceLineResult(line.replace(target, replacement), occurrences);
-        }
-
-        Pattern pattern = Pattern.compile(Pattern.quote(target), Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-        Matcher matcher = pattern.matcher(line);
-        StringBuffer buffer = new StringBuffer();
-        int occurrences = 0;
-        while (matcher.find()) {
-            occurrences++;
-            matcher.appendReplacement(buffer, Matcher.quoteReplacement(replacement));
-        }
-        matcher.appendTail(buffer);
-        return new ReplaceLineResult(buffer.toString(), occurrences);
-    }
-
     private String relative(Path path, Path root) {
         try {
             return root.relativize(path).toString().replace('\\', '/');
         } catch (Exception ignored) {
             return path.toString().replace('\\', '/');
-        }
-    }
-
-    private static final class ReplaceLineResult {
-        private final String line;
-        private final int occurrences;
-
-        private ReplaceLineResult(String line, int occurrences) {
-            this.line = line;
-            this.occurrences = occurrences;
-        }
-
-        private String getLine() {
-            return line;
-        }
-
-        private int getOccurrences() {
-            return occurrences;
         }
     }
 }
